@@ -46,7 +46,10 @@ package sqlproxy
 import (
 	"database/sql"
 	"database/sql/driver"
+	"errors"
+	"fmt"
 	"io"
+	"reflect"
 )
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -133,14 +136,14 @@ func (s *statement) NumInput() int {
 func (s *statement) Exec(values []driver.Value) (driver.Result, error) {
 	args := castValues(values)
 	s.driver.execBeforeQueryHook(s.query, args)
-	return s.stmt.Exec(args)
+	return s.stmt.Exec(args...)
 }
 
 //Query implements the driver.Stmt interface.
 func (s *statement) Query(values []driver.Value) (driver.Rows, error) {
 	args := castValues(values)
 	s.driver.execBeforeQueryHook(s.query, args)
-	rows, err := s.stmt.Query(args)
+	rows, err := s.stmt.Query(args...)
 	return &resultRows{rows}, err
 }
 
@@ -173,10 +176,37 @@ func (r *resultRows) Close() error {
 
 //Next implements the driver.Rows interface.
 func (r *resultRows) Next(dest []driver.Value) error {
-	if r.rows.Next() {
-		return r.rows.Scan(castValues(dest)...)
+	if !r.rows.Next() {
+		return io.EOF
 	}
-	return io.EOF
+
+	columnTypes, err := r.rows.ColumnTypes()
+	if err != nil {
+		return errors.New("cannot determine column types while proxying Next(): " + err.Error())
+	}
+
+	reflectValues := make([]reflect.Value, len(dest))
+	scannableValues := make([]interface{}, len(dest))
+	for idx, columnType := range columnTypes {
+		//can only construct a scanning target if the ScanType() is not interface{}
+		scanType := columnType.ScanType()
+		if scanType == reflect.TypeOf(new(interface{})).Elem() {
+			return fmt.Errorf("cannot determine ScanType for result column %d", idx)
+		}
+		value := reflect.New(scanType)
+		reflectValues[idx] = value
+		scannableValues[idx] = value.Interface()
+	}
+
+	err = r.rows.Scan(scannableValues...)
+	if err != nil {
+		return err
+	}
+
+	for idx := range columnTypes {
+		dest[idx] = reflect.Indirect(reflectValues[idx]).Interface()
+	}
+	return nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
