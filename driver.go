@@ -35,10 +35,11 @@ strings.
 
 Caveats
 
-This package is intended for development purposes only, and should not be used
-with production databases. It only implements the bare necessities of the
-database/sql driver interface and hides optimizations and advanced features of
-the proxied SQL driver.
+Do not use this code on production databases. This package is intended for
+development purposes only, and access to it should remain behind a debugging
+switch. It only implements the bare necessities of the database/sql driver
+interface and hides optimizations and advanced features of the proxied SQL
+driver.
 
 */
 package sqlproxy
