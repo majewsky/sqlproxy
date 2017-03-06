@@ -178,14 +178,14 @@ func Test_BeforeQueryHook(t *testing.T) {
 			tt.Unexpected("x", 42, x)
 		}
 
-		tt.Must(db.QueryRow(`SELECT $1`, int16(23)).Scan(&x))
+		tt.Must(db.QueryRow(`SELECT $1::integer`, int16(23)).Scan(&x))
 		if x != 23 {
 			tt.Unexpected("x", 23, x)
 		}
 
 		var y string
 		var z string
-		tt.Must(db.QueryRow(`SELECT $1, $2`, "black", "magic").Scan(&y, &z))
+		tt.Must(db.QueryRow(`SELECT $1::text, $2::text`, "black", "magic").Scan(&y, &z))
 		if y != "black" {
 			tt.Unexpected("y", "black", y)
 		}
@@ -195,8 +195,8 @@ func Test_BeforeQueryHook(t *testing.T) {
 
 		expectedQueries := []string{
 			`(SELECT 42) []interface {}{}`,
-			`(SELECT $1) []interface {}{23}`,
-			`(SELECT $1, $2) []interface {}{"black", "magic"}`,
+			`(SELECT $1::integer) []interface {}{23}`,
+			`(SELECT $1::text, $2::text) []interface {}{"black", "magic"}`,
 		}
 		if !reflect.DeepEqual(queries, expectedQueries) {
 			t.Errorf("not seeing the queries that I expected")
