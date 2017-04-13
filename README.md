@@ -1,5 +1,7 @@
 # sqlproxy
 
+[![GoDoc](https://godoc.org/github.com/majewsky/sqlproxy?status.svg)](https://godoc.org/github.com/majewsky/sqlproxy)
+
 This is a driver for the standard library's [`database/sql` package][go-sql]
 that passes SQL statements through to another driver, but adds hooks to extend
 the standard library's API.
